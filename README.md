@@ -13,11 +13,7 @@ An Arduino project implementing a security alarm system featuring PIN code acces
 * [Schematic/Wiring](#schematicwiring)
 * [Installation & Setup](#installation--setup)
 * [How to Use](#how-to-use)
-* [Default PIN](#default-pin)
-* [Code Overview](#code-overview)
-* [Contributing](#contributing)
-* [License](#license)
-* [Future Improvements](#future-improvements)
+
 
 ## Features
 
@@ -142,7 +138,4 @@ The pin connections are defined in the `.ino` sketch:
         * The LCD will then prompt "Conferma PIN:" (Confirm PIN:). Re-enter the new PIN.
         * If both new PIN entries match, the LCD will display "PIN Modificato!" (PIN Changed!) and the new PIN will be saved in the Arduino's volatile memory (it will reset to the hardcoded default on power loss). The system then returns to the "Inserisci Pin" screen.
     * **If the old PIN is incorrect or the new PIN confirmation fails:** An error message will be displayed (e.g., "Vecchio PIN Errato" or "Conferma Errata"), and the PIN change process will either restart from the "Old PIN" step or abort, returning to the main PIN entry screen.
-
-## Default PIN
-
 
