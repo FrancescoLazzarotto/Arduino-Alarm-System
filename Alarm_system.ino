@@ -1,44 +1,42 @@
-/*
-import delle librerie:
-    -Keypad.h: gestisce la lettura di matrici di tasti
-    -LiquidCrystal.h: controlla un display LCD
-*/
-
 #include <Keypad.h>
 #include <LiquidCrystal.h>
 
-/*
-definizione dei pin:
-    -trigPin e echoPin per il sensore ultrasonico HC-SR204
-    -buzzer per il piezo
-    -alarm pin di output per segnalare che il sistema è attivo (led)
-*/
+/*---------------------------------------------------------------
+  definizione dei pin:
+    - trigPin e echoPin per il sensore ultrasonico HC-SR04
+    - buzzer per il piezo
+    - alarm pin di output per segnalare che il sistema è attivo (led)
+---------------------------------------------------------------*/
 #define trigPin 12
 #define echoPin 13
 #define buzzer   3
 #define alarm    2
 
-/*
-definizione pincode:
-    -pin_len: lunghezza del codice PIN (6 cifre)
-    -pin_codice: array contenente il PIN corretto hard-coded(da cambiare)
-    -tmp_codice: array in cui vengono memorizzati i caratteri inseriti dall'utente
-    -copertura: array per visualizzare sul LCD un "*" per ogni carattere inserito
-    -stato attuale del PIN in memoria -> verrà sovrascritto quando si cambia PIN
-*/
+/*---------------------------------------------------------------
+  definizione pincode:
+    - pin_len: lunghezza del codice PIN (6 cifre)
+    - pin_codice: array contenente il PIN (inizialmente hard-coded)
+    - tmp_codice: array in cui vengono memorizzati i caratteri inseriti dall'utente
+    - copertura: array per visualizzare sul LCD un "*" per ogni carattere inserito
+---------------------------------------------------------------*/
 #define pin_len 6
-char pin_codice[pin_len] = {'1', '2', '3', '4', '5', '6'};  
+char pin_codice[pin_len] = {'1', '2', '3', '4', '5', '6'};  // default al primo avvio
 char tmp_codice[pin_len];
 char copertura[pin_len + 1];
-bool pin_modificato = false;
 
 /*
-configurazione del Keypad:
-    -definizione rige e colonne
-    -key[righe][colonne]: mappa dei tasti fisici
-    -righe_pin e colonne_pin numeri di pin dell'arduino alla quale sono collegate righe e colonne
-    -oggetto keypad che fornisce il metodo getKey() per leggere un tasto premuto
+  stato attuale del PIN in memoria (RAM) 
+  -> verrà sovrascritto quando si cambia PIN
 */
+bool pin_modificato = false;
+
+/*---------------------------------------------------------------
+  configurazione del Keypad:
+    - definizione righe e colonne
+    - key[righe][colonne]: mappa dei tasti fisici
+    - righe_pin e colonne_pin: numeri di pin dell'Arduino a cui sono collegate righe e colonne
+    - oggetto pad che fornisce il metodo getKey() per leggere un tasto premuto
+---------------------------------------------------------------*/
 #define righe   4
 #define colonne 4
 char key[righe][colonne] = {
@@ -51,14 +49,14 @@ byte righe_pin[righe]   = {11, 10, 9, 8};
 byte colonne_pin[colonne] = {7, 6, 5, 4};
 Keypad pad = Keypad(makeKeymap(key), righe_pin, colonne_pin, righe, colonne);
 
-/*
+/*---------------------------------------------------------------
   configurazione schermo LCD:
     - i sei argomenti corrispondono ai pin a cui sono collegati
-      rispettivamente RS, E, D4, D5, D6, D7 (qui usiamo A0--A5)
-*/
+      rispettivamente RS, E, D4, D5, D6, D7 (qui usiamo A0..A5)
+---------------------------------------------------------------*/
 LiquidCrystal lcd(A0, A1, A2, A3, A4, A5);
 
-/*
+/*---------------------------------------------------------------
   variabili di controllo:
     - ultimo_char: ultimo carattere letto dal keypad
     - numero_cifre: numero di cifre inserite nel tmp_codice
@@ -67,34 +65,30 @@ LiquidCrystal lcd(A0, A1, A2, A3, A4, A5);
     - step_cambio: 0 = attesa vecchio PIN, 
                   1 = attesa nuovo PIN (prima volta), 
                   2 = attesa nuovo PIN (conferma)
-*/
+---------------------------------------------------------------*/
 char   ultimo_char;
 byte   numero_cifre = 0;
 bool   stato_sistema = false;
 bool   in_cambio_pin = false;
 byte   step_cambio = 0;
 
-/*
-  buffer per la modalità cambia pin:
+/*---------------------------------------------------------------
+  buffer per la modalità “cambia PIN”:
     - old_pin_tmp: per memorizzare temporaneamente la digitazione dell’attuale PIN
     - new_pin_tmp1: primo inserimento del nuovo PIN
     - new_pin_tmp2: secondo inserimento (conferma) del nuovo PIN
-    - copertura_cambio: maschera a "*" per la modalità di inserimento PIN durante il cambio
-*/
+    - copertura_cambio: maschera a “*” per la modalità di inserimento PIN durante il cambio
+---------------------------------------------------------------*/
 char old_pin_tmp[pin_len];
 char new_pin_tmp1[pin_len];
 char new_pin_tmp2[pin_len];
 char copertura_cambio[pin_len + 1];
 
-/*
-funzione di supporto display -> pulire e scrivere una stringa su una riga specifica dell’LCD
-    -param: riga(0, 1)-> indice della riga lcd, text testo da visualizzare (max 16 char)
-    -funzionamento:
-        -posiziona il cursore all'inizio della riga
-        -stampa 16 spazi per cancellare ogni carattere rimasto
-        -ri-posiziona il cursore a colonna 0 della riga
-        -stampa il testo
-*/
+/*---------------------------------------------------------------
+  funzione di supporto display -> pulire e scrivere una stringa su una riga dell’LCD
+    - param: riga (0 o 1), text -> testo da visualizzare (fino a 16 caratteri)
+    - prima cancella la riga (16 spazi), poi riscrive il testo
+---------------------------------------------------------------*/
 void display(byte riga, const char *text) {
   lcd.setCursor(0, riga);
   lcd.print("                "); // 16 spazi
@@ -102,9 +96,9 @@ void display(byte riga, const char *text) {
   lcd.print(text);
 }
 
-/*
+/*---------------------------------------------------------------
   funzione privata per resettare i buffer di inserimento PIN “normale”
-*/
+---------------------------------------------------------------*/
 void resetBufferPIN() {
   for (byte i = 0; i < pin_len; i++) {
     tmp_codice[i] = '.';
@@ -114,10 +108,10 @@ void resetBufferPIN() {
   numero_cifre = 0;
 }
 
-/*
+/*---------------------------------------------------------------
   funzione verificaPINInserito -> controlla il tmp_codice (lunghezza pin_len)
   - se corrisponde al pin_codice, restituisce true, altrimenti false
-*/
+---------------------------------------------------------------*/
 bool verificaPINInserito() {
   for (byte i = 0; i < pin_len; i++) {
     if (pin_codice[i] != tmp_codice[i]) {
@@ -127,16 +121,16 @@ bool verificaPINInserito() {
   return true;
 }
 
-/*
+/*---------------------------------------------------------------
   funzione verifica -> converte tmp_codice in autorizzazione 
   per armare/spegnere il sistema
-*/
+---------------------------------------------------------------*/
 void verifica() {
   bool corretto = verificaPINInserito();
   lcd.clear();
 
   if (corretto) {
-    // Cambio stato del sistema (armato <-> disarmato)
+    
     stato_sistema = !stato_sistema;
     if (stato_sistema) {
       display(0, "Pin corretto");
@@ -157,22 +151,16 @@ void verifica() {
     delay(1000);
   }
 
-  // Torno a schermata di inserimento PIN normale
+  
   lcd.clear();
   display(0, "Inserisci Pin");
   resetBufferPIN();
 }
 
-/*
-funzione inserimento -> gestire l’inserimento di un nuovo carattere dal keypad
-    -funzionamento:
-        -salva il carattere letto dal keypad
-        -trasforma in '*' la maschera visuale
-        -se raggiunge la lunghezza del pin
-            -controlal il codice con verifica
-        -sennò
-            -visualizza display pin e la maschera aggiornata
-*/
+/*---------------------------------------------------------------
+  funzione inserimento -> gestisce l’inserimento di un nuovo 
+  carattere per il PIN “normale”
+---------------------------------------------------------------*/
 void inserimento() {
   tmp_codice[numero_cifre] = ultimo_char;
   copertura[numero_cifre] = '*';
@@ -187,14 +175,10 @@ void inserimento() {
   }
 }
 
-/*
-funzione cancella -> rimuovere l’ultimo carattere inserito
-    -funzionamento:
-        -se c'è almeno un carattere
-            -cancella l'asterisco corrispondente
-        -pulisce lo schermo
-        -ripropone la schermata di inserimento pin
-*/
+/*---------------------------------------------------------------
+  funzione cancella -> rimuove l’ultimo carattere inserito
+  nel PIN “normale”
+---------------------------------------------------------------*/
 void cancella() {
   if (numero_cifre >= 1) {
     copertura[numero_cifre - 1] = ' ';
@@ -205,10 +189,10 @@ void cancella() {
   display(1, copertura);
 }
 
-/*
+/*---------------------------------------------------------------
   funzione resetBufferCambioPIN -> resettare buffer e maschera 
   usata nelle varie fasi della modalità cambio PIN
-*/
+---------------------------------------------------------------*/
 void resetBufferCambioPIN() {
   for (byte i = 0; i < pin_len; i++) {
     old_pin_tmp[i]     = '.';
@@ -220,15 +204,14 @@ void resetBufferCambioPIN() {
   numero_cifre = 0;
 }
 
-/*
+/*---------------------------------------------------------------
   funzione gestisciCambioPIN -> gestisce la logica a stati per
   cambiare il PIN (step_cambio = 0,1,2)
-    // step_cambio = 0 -> sto aspettando la digitazione dell’attuale PIN
+---------------------------------------------------------------*/
+void gestisciCambioPIN() {
+  // step_cambio = 0 -> sto aspettando la digitazione dell’attuale PIN
   // step_cambio = 1 -> sto digitando il primo nuovo PIN
   // step_cambio = 2 -> sto digitando la conferma del nuovo PIN
-*/
-void gestisciCambioPIN() {
-
 
   switch (step_cambio) {
     case 0:
@@ -271,7 +254,7 @@ void gestisciCambioPIN() {
       }
       break;
 
-    case 1:
+        case 1:
       
       if (numero_cifre < pin_len) {
         new_pin_tmp1[numero_cifre] = ultimo_char;
@@ -280,9 +263,9 @@ void gestisciCambioPIN() {
         display(0, "Nuovo PIN:");
         display(1, copertura_cambio);
         if (numero_cifre == pin_len) {
-          
           step_cambio = 2;
-          resetBufferCambioPIN();
+          numero_cifre = 0;
+          for (byte i = 0; i < pin_len; i++) copertura_cambio[i] = ' ';
           lcd.clear();
           display(0, "Conferma PIN:");
           display(1, copertura_cambio);
@@ -291,7 +274,7 @@ void gestisciCambioPIN() {
       break;
 
     case 2:
-      
+     
       if (numero_cifre < pin_len) {
         new_pin_tmp2[numero_cifre] = ultimo_char;
         copertura_cambio[numero_cifre] = '*';
@@ -299,43 +282,39 @@ void gestisciCambioPIN() {
         display(0, "Conferma PIN:");
         display(1, copertura_cambio);
         if (numero_cifre == pin_len) {
-          
-          bool nuova_ok = true;
+          bool match = true;
           for (byte i = 0; i < pin_len; i++) {
             if (new_pin_tmp1[i] != new_pin_tmp2[i]) {
-              nuova_ok = false;
+              match = false;
               break;
             }
           }
-          if (nuova_ok) {
-            
+          if (match) {
             for (byte i = 0; i < pin_len; i++) {
-              pin_codice[i] = new_pin_tmp1[i];
+              pin_codice[i] = new_pin_tmp1[i]; 
             }
             pin_modificato = true;
             lcd.clear();
-            display(0, "PIN Modificato!");
-            display(1, "Ripristino...");
+            display(0, "PIN cambiato!");
+            display(1, "Con successo");
             delay(1500);
-          }
-          else {
+          } else {
             lcd.clear();
-            display(0, "Conferma Errata");
-            display(1, "Riprova");
+            display(0, "PIN non coincide");
+            display(1, "Riprova tutto");
             delay(1500);
           }
           
           in_cambio_pin = false;
           step_cambio = 0;
-          resetBufferPIN();
+          resetBufferCambioPIN();
           lcd.clear();
           display(0, "Inserisci Pin");
         }
       }
       break;
-
     default:
-      
+     
       in_cambio_pin = false;
       step_cambio = 0;
       resetBufferPIN();
@@ -344,14 +323,7 @@ void gestisciCambioPIN() {
       break;
   }
 }
-/*
-setup -> inizializzazione periferiche e stato iniziale
-    -lcd
-    -alarm, buzzer, trigPin -> OUTPUT
-    -echoPin -> INPUT
-    -debug
-    -msg iniziale
-*/
+
 void setup() {
   lcd.begin(16, 2);
   pinMode(alarm, OUTPUT);
@@ -359,6 +331,8 @@ void setup() {
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
   Serial.begin(9600);
+
+  
   display(0, "Inserisci Pin");
   resetBufferPIN();
 }
@@ -366,7 +340,9 @@ void setup() {
 void loop() {
   ultimo_char = pad.getKey();
   
-
+  /***************************************************************
+   * GESTIONE TASTI PREMUTI
+   ***************************************************************/
   if (ultimo_char) {
     
     if (stato_sistema) {
@@ -374,13 +350,13 @@ void loop() {
       Serial.println(ultimo_char);
     }
 
-
+    
     if (in_cambio_pin) {
       gestisciCambioPIN();
       return; 
     }
 
- 
+    
     if (!stato_sistema && ultimo_char == 'A') {
       
       in_cambio_pin = true;
@@ -408,6 +384,9 @@ void loop() {
     }
   }
 
+  /***************************************************************
+   * GESTIONE SENSORE AD ULTRASUONI (SE ALARME ATTIVO)
+   ***************************************************************/
   if (stato_sistema) {
     
     digitalWrite(trigPin, LOW);
@@ -429,13 +408,14 @@ void loop() {
     }
     else {
       noTone(buzzer);
-        }
-    delay(300);
+      
     }
+
+    delay(300);
+  }
   else {
-    
+   
     noTone(buzzer);
     
   }
 }
-
