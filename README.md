@@ -46,7 +46,6 @@ An Arduino project implementing a security alarm system featuring PIN code acces
 * [`Keypad.h`](https://playground.arduino.cc/Code/Keypad/): For interfacing with the matrix keypad.
 * [`LiquidCrystal.h`](https://www.arduino.cc/en/Reference/LiquidCrystal): For controlling the LCD display.
 
-These libraries are typically included with the Arduino IDE or can be installed via the Library Manager (`Sketch > Include Library > Manage Libraries...`).
 
 ## Schematic/Wiring
 
@@ -84,21 +83,7 @@ The pin connections are defined in the `.ino` sketch:
     * Anode (Longer Leg): Arduino Pin 2 (via ~220-330 Ohm resistor)
     * Cathode (Shorter Leg): GND
 
-*(It's highly recommended to include a simple Fritzing diagram or a hand-drawn schematic image in your repository and link it here for clarity).*
 
-## Installation & Setup
-
-1.  **Clone the Repository (Optional):**
-    ```bash
-    git clone <your-repository-url>
-    cd <repository-name>
-    ```
-2.  **Gather Hardware:** Collect all the components listed under [Hardware Requirements](#hardware-requirements).
-3.  **Wire the Circuit:** Connect the components to your Arduino board as per the [Schematic/Wiring](#schematicwiring) section. Double-check all connections.
-4.  **Install Libraries:** Open the Arduino IDE. If `Keypad.h` or `LiquidCrystal.h` are not already installed, go to `Sketch > Include Library > Manage Libraries...` and install them.
-5.  **Open the Sketch:** Open the `.ino` file (e.g., `alarm_system.ino`) in the Arduino IDE.
-6.  **Select Board & Port:** In the Arduino IDE, select your Arduino board type (e.g., Arduino Uno) under `Tools > Board` and the correct COM port under `Tools > Port`.
-7.  **Upload the Code:** Click the "Upload" button (right arrow icon) in the Arduino IDE.
 
 ## How to Use
 
